@@ -1,72 +1,47 @@
-# IQForge
+# IQForge — complete project
 
-**The Squarespace for the Solana Internet**
+This is the **whole app in one folder** (not a patch). Unzip it and run it.
 
-No-code drag & drop builder that creates fully onchain websites tied to SNS (.sol) domains.
+## Run it (3 steps)
 
-Built for IQLabs Official.
+You need **Node.js 18 or newer** installed first. If you don't have it, get the
+"LTS" version from https://nodejs.org and install it, then reopen your terminal.
 
-## Features
-- Wallet Connect (Phantom, Solflare, etc.)
-- Drag & Drop Website Editor
-- Publish directly to IPFS + SNS domain
-- AI-powered section generation
-- Beautiful templates (NFT projects, personal sites, dApps, etc.)
+Then, in a terminal pointed at this folder:
 
-## Roadmap
-Phase 1: Foundation (Completed)
-
-Next.js 15 + TypeScript + Tailwind + shadcn/ui setup
-Wallet connection (Phantom, Solflare, etc.)
-Basic project structure and routing
-
-Phase 2: Drag & Drop Editor (Completed)
-
-Visual canvas with live preview
-Component library (Hero, Text, Image, Button, etc.)
-Properties panel for editing
-Drag & drop reordering using @dnd-kit
-
-Phase 3: SNS + IQLabs Integration (Next)
-
-SNS domain selection and management
-IQLabs SDK integration for onchain storage (codeIn)
-Publish flow: Build → Store on Solana via IQLabs → Update SNS record
-IPFS as optional fallback
-
-Phase 4: AI Assistant
-
-AI-powered section generation
-"Describe your site" → auto layout
-Smart content suggestions
-
-Phase 5: Polish & Launch
-
-Template gallery
-Responsive design tools
-Analytics & SEO settings
-User dashboard (My Sites)
-Custom domain support
-Mobile editor experience
-
-Future (Post-MVP)
-
-Team collaboration on sites
-Marketplace for premium templates
-Advanced components (NFT galleries, token widgets, payment buttons)
-Multi-chain support
-
-## Tech Stack
-- Next.js 15 (App Router)
-- TypeScript
-- Tailwind + shadcn/ui
-- Solana Web3.js + SNS SDK
-- IPFS / Arweave
-
-## Quick Start
-
-```bash
-git clone https://github.com/yourusername/iqforge.git
-cd iqforge
+```
 npm install
 npm run dev
+```
+
+When it says "ready", open your browser to:
+
+```
+http://localhost:3000
+```
+
+That's it. Click **Browse templates**, pick one, edit it, and walk the whole
+flow through to Publish.
+
+## About "demo mode"
+The file `.env.local` has `NEXT_PUBLIC_IQ_MOCK=1` turned on. That lets the
+**Publish** and **domain** steps finish in a pretend mode, so you can experience
+the full journey before the real blockchain SDKs are connected. Nothing is
+actually written onchain in this mode. To go live later, those two connections
+(IQLabs + SNS) get wired in `lib/iqlabs.ts` and `lib/sns.ts`.
+
+## What's inside
+- 4 finished templates (Creator Profile, Meme Coin Launcher, NFT Collection Hub,
+  Token Dashboard) + 14 "coming soon" tiles, named per your list.
+- Wallet connect, a "My Sites" dashboard, the domain-attach step, and publish.
+- IQLabs neon-green / near-black theme throughout.
+
+## Common hiccups
+- **"npm: command not found"** → Node.js isn't installed yet. See step above.
+- **A wall of red text during `npm install`** → usually just warnings, not errors.
+  If it finishes and you can run `npm run dev`, you're fine.
+- **Install crashes on Windows mentioning `git config`, `yarn`, or `'true' is
+  not recognized`** → this project already handles it (the included `.npmrc`
+  skips those Mac/Linux-only setup scripts). If you somehow still hit it, run
+  `npm install --ignore-scripts` instead, then `npm run dev`.
+- **Port already in use** → run `npm run dev -- -p 3001` and use port 3001.
