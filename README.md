@@ -1,47 +1,82 @@
-# IQForge — complete project
+# IQForge
 
-This is the **whole app in one folder** (not a patch). Unzip it and run it.
+**The Squarespace for the Solana Internet**
 
-## Run it (3 steps)
+No-code website builder that creates beautiful, fully onchain websites tied to your SNS (.sol) domains.
 
-You need **Node.js 18 or newer** installed first. If you don't have it, get the
-"LTS" version from https://nodejs.org and install it, then reopen your terminal.
+Built for **IQLabs Official** in partnership with **SNS**.
 
-Then, in a terminal pointed at this folder:
+---
 
-```
-npm install
+### Features
+
+- **Wallet Connect** — Phantom, Solflare, and other Solana wallets
+- **Template Gallery** — 18 professionally designed templates
+- **Easy Customizer** — Modify text, images, backgrounds, and colors
+- **SNS Integration** — Connect existing .sol domains or register new ones
+- **One-Click Publish** — Store site permanently on Solana via IQLabs + update SNS record
+- **Eternal Websites** — Truly decentralized, censorship-resistant, and permanent
+
+---
+
+### 🚀 Roadmap
+
+#### Phase 1: Foundation (Completed)
+- Next.js 15 + TypeScript + Tailwind + shadcn/ui
+- Wallet connection
+- Clean project structure and routing
+- IQLabs neon-green / near-black theming
+
+#### Phase 2: Template System (In Progress)
+- 18 high-quality templates
+- Template Gallery page
+- Template Customizer (text, images, background, colors)
+- Live preview while editing
+
+#### Phase 3: SNS + IQLabs Integration (Next)
+- Display user's .sol domains
+- Register new SNS domains if needed
+- Publish flow: IQLabs onchain storage (`codeIn`) → Update SNS record
+- IPFS/Arweave as optional fallback
+
+#### Phase 4: Polish & MVP Launch
+- User dashboard ("My Sites")
+- Mobile-responsive templates
+- Basic SEO & metadata settings
+- Publish success page with shareable link
+
+#### Phase 5: AI Assistant & Enhancements
+- AI-powered content & section generation
+- Smart template suggestions
+- Advanced customization options
+
+#### Future (Post-MVP)
+- Full drag & drop editor
+- Team collaboration
+- Template marketplace
+- Analytics
+- Advanced Web3 components (NFT galleries, token widgets, payment buttons)
+- Multi-chain support
+
+---
+
+### Tech Stack
+
+- **Next.js 15** (App Router)
+- **TypeScript**
+- **Tailwind CSS + shadcn/ui**
+- **Solana Wallet Adapter**
+- **SNS SDK** (Solana Name Service)
+- **IQLabs SDK** (primary onchain storage)
+- Framer Motion (animations)
+
+---
+
+### Quick Start
+
+```bash
+git clone https://github.com/jsketto/iqforge.git
+cd iqforge
+npm install --legacy-peer-deps
+cp .env.local.example .env.local
 npm run dev
-```
-
-When it says "ready", open your browser to:
-
-```
-http://localhost:3000
-```
-
-That's it. Click **Browse templates**, pick one, edit it, and walk the whole
-flow through to Publish.
-
-## About "demo mode"
-The file `.env.local` has `NEXT_PUBLIC_IQ_MOCK=1` turned on. That lets the
-**Publish** and **domain** steps finish in a pretend mode, so you can experience
-the full journey before the real blockchain SDKs are connected. Nothing is
-actually written onchain in this mode. To go live later, those two connections
-(IQLabs + SNS) get wired in `lib/iqlabs.ts` and `lib/sns.ts`.
-
-## What's inside
-- 4 finished templates (Creator Profile, Meme Coin Launcher, NFT Collection Hub,
-  Token Dashboard) + 14 "coming soon" tiles, named per your list.
-- Wallet connect, a "My Sites" dashboard, the domain-attach step, and publish.
-- IQLabs neon-green / near-black theme throughout.
-
-## Common hiccups
-- **"npm: command not found"** → Node.js isn't installed yet. See step above.
-- **A wall of red text during `npm install`** → usually just warnings, not errors.
-  If it finishes and you can run `npm run dev`, you're fine.
-- **Install crashes on Windows mentioning `git config`, `yarn`, or `'true' is
-  not recognized`** → this project already handles it (the included `.npmrc`
-  skips those Mac/Linux-only setup scripts). If you somehow still hit it, run
-  `npm install --ignore-scripts` instead, then `npm run dev`.
-- **Port already in use** → run `npm run dev -- -p 3001` and use port 3001.
