@@ -36,6 +36,13 @@ actually written onchain in this mode. To go live later, those two connections
 - Wallet connect, a "My Sites" dashboard, the domain-attach step, and publish.
 - IQLabs neon-green / near-black theme throughout.
 
+## Going live (real onchain publishing)
+Demo mode is ON by default. To publish for real: open .env.local, change
+NEXT_PUBLIC_IQ_MOCK to 0, restart npm run dev, connect a funded wallet.
+Real publishing pays Solana transaction fees plus an IQ protocol fee, and
+attaching a domain writes a real SNS record on your .sol name. Test with a
+throwaway wallet first.
+
 ## Common hiccups
 - **"npm: command not found"** → Node.js isn't installed yet. See step above.
 - **A wall of red text during `npm install`** → usually just warnings, not errors.

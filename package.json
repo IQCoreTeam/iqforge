@@ -18,7 +18,9 @@
     "@solana/wallet-adapter-react-ui": "^0.9.35",
     "@solana/wallet-adapter-wallets": "^0.19.32",
     "@bonfida/spl-name-service": "^3.0.9",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "@iqlabs-official/solana-sdk": "^0.1.27",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
