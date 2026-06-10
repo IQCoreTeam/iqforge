@@ -1,0 +1,96 @@
+/* app/globals.css */
+/* Display: Clash Display (Fontshare). Mono: JetBrains Mono. Body: Geist Sans.
+   @import must come before everything else, or CSS drops it. */
+@import url("https://api.fontshare.com/v2/css?f[]=clash-display@600,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Geist:wght@300;400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* IQLabs palette */
+    --iq-green: 142 99% 62%; /* #3DFE7E */
+    --iq-green-dim: 142 60% 45%;
+    --iq-black: 210 11% 4%; /* #08090A */
+    --iq-panel: 210 9% 8%;
+    --iq-foreground: 140 60% 98%;
+    --iq-muted: 140 6% 56%;
+
+    /* shadcn token mapping */
+    --background: var(--iq-black);
+    --foreground: var(--iq-foreground);
+    --card: var(--iq-panel);
+    --card-foreground: var(--iq-foreground);
+    --popover: var(--iq-panel);
+    --popover-foreground: var(--iq-foreground);
+    --primary: var(--iq-green);
+    --primary-foreground: 210 11% 4%;
+    --secondary: 210 8% 14%;
+    --secondary-foreground: var(--iq-foreground);
+    --muted: 210 8% 12%;
+    --muted-foreground: var(--iq-muted);
+    --accent: 210 8% 16%;
+    --accent-foreground: var(--iq-foreground);
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 140 20% 18%;
+    --input: 210 8% 16%;
+    --ring: var(--iq-green);
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Geist", system-ui, sans-serif;
+    /* subtle grid texture for atmosphere */
+    background-image:
+      radial-gradient(circle at 50% -10%, hsl(var(--iq-green) / 0.06), transparent 55%),
+      linear-gradient(hsl(var(--border) / 0.25) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.25) 1px, transparent 1px);
+    background-size: 100% 100%, 40px 40px, 40px 40px;
+  }
+  h1, h2, h3, .font-display {
+    font-family: "Clash Display", "Geist", sans-serif;
+    letter-spacing: -0.01em;
+  }
+  .font-mono {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+}
+
+@layer utilities {
+  .glow {
+    box-shadow: 0 0 0 1px hsl(var(--iq-green) / 0.4),
+      0 0 24px hsl(var(--iq-green) / 0.25);
+  }
+  .text-glow {
+    text-shadow: 0 0 18px hsl(var(--iq-green) / 0.55);
+  }
+}
+
+/* --- Wallet adapter button: themed to IQ neon-green --- */
+.wallet-adapter-button {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  font-family: "Geist", sans-serif !important;
+  font-weight: 600 !important;
+  height: 40px !important;
+  border-radius: 0.6rem !important;
+  padding: 0 1rem !important;
+}
+.wallet-adapter-button:not([disabled]):hover {
+  background: hsl(var(--iq-green-dim)) !important;
+}
+.wallet-adapter-button-trigger {
+  background: hsl(var(--primary)) !important;
+}
+.wallet-adapter-modal-wrapper {
+  background: hsl(var(--card)) !important;
+}
