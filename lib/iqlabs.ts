@@ -1,25 +1,32 @@
 // lib/iqlabs.ts
 //
-// WRITE layer for IQLabs onchain storage. (Reads live in lib/gateway.ts.)
+// WRITE layer for IQLabs onchain storage — REAL implementation against
+// @iqlabs-official/solana-sdk. (Reads live in lib/gateway.ts.)
 //
-// Confirmed model (from the deployed gateway + iq-gateway repo):
-//   • A published site is a set of files written on-chain, finalized by a
-//     MANIFEST transaction. The manifest tx signature IS the on-chain path —
-//     exactly the "tail of the linked list becomes the path" rule.
-//   • The live gateway then serves it at  {gateway}/site/{manifestSig}.
-//   • The .sol domain gets ONE URL record pointing at that manifest.
+// Verified flow (from iq-gateway/scripts/deploy-site.ts, the canonical deploy):
+//   1. Each file → iqlabs.writer.codeIn(ctx, base64, path, 0, mime) → tx sig.
+//      codeIn writes the data as an on-chain path (linked list / session) and
+//      indexes path + metadata to the wallet in one tx — the core IQ structure.
+//   2. Manifest JSON { index: {path}, paths: {path: {id: sig}} } uploaded the
+//      same way. The MANIFEST SIGNATURE is the site's pointer.
+//   3. Gateways serve it at {gateway}/site/{manifestSig}.
 //
-// ⚠️ The write itself is still stubbed: it requires the iqlabs-solana-sdk
-// (github.com/IQCoreTeam/iqlabs-solana-sdk). Wiring real writes is a major
-// step pending owner approval — see CHANGES.md. This file stays the single
-// integration point; nothing else touches the SDK.
+// The SDK's SignerInput accepts a browser wallet adapter directly
+// (publicKey + signTransaction + signAllTransactions) — verified in
+// sdk/src/sdk/utils/wallet.ts — so publishing happens client-side with
+// Phantom/Solflare. No keypair files, no server.
 
-import type { Site, StorageRef } from "./types";
+import type { Connection } from "@solana/web3.js";
+import { codeIn } from "@iqlabs-official/solana-sdk/writer";
+import { exportSiteHtml } from "./export-html";
+import type { PublishWallet, Site, StorageRef } from "./types";
 
 export interface PublishInput {
   site: Site;
-  /** Connected wallet adapter (signs the storage txs). */
-  wallet: unknown;
+  wallet: PublishWallet;
+  connection: Connection;
+  /** 0–100, across both uploads. */
+  onProgress?: (percent: number) => void;
 }
 
 /** True for placeholder pointers created in demo mode. */
@@ -27,46 +34,66 @@ export function isMockPointer(pointer: string): boolean {
   return pointer.startsWith("iq:mock:");
 }
 
-/**
- * Serializes a site into the payload to be written on-chain.
- * NOTE: the real pipeline publishes FILES (index.html + assets) under a
- * manifest, not this JSON — pending the canonical-format decision, this JSON
- * remains the draft/publish payload and the size estimator's input.
- */
-export function buildSitePayload(site: Site): string {
-  return JSON.stringify({
-    v: 1,
-    templateId: site.templateId,
-    title: site.title,
-    theme: site.theme,
-    content: site.content,
-    publishedAt: Date.now(),
-  });
+/** Estimated on-chain byte size of the published site (the exported HTML). */
+export async function estimatePayloadBytes(site: Site): Promise<number> {
+  return new TextEncoder().encode(await exportSiteHtml(site)).length;
 }
 
-/** Estimated on-chain byte size of the current site payload. */
-export function estimatePayloadBytes(site: Site): number {
-  return new TextEncoder().encode(buildSitePayload(site)).length;
-}
-
-/**
- * Writes the site on-chain and returns the manifest pointer.
- * Real implementation (once approved): generate static files via
- * lib/export-html.ts, write them + manifest with iqlabs-solana-sdk, return the
- * manifest tx signature as `pointer`.
- */
 export async function publishToIQLabs(input: PublishInput): Promise<StorageRef> {
+  const { site, wallet, connection, onProgress } = input;
+
   if (process.env.NEXT_PUBLIC_IQ_MOCK === "1") {
-    await new Promise((r) => setTimeout(r, 800));
-    return {
-      provider: "iqlabs",
-      pointer: `iq:mock:${input.site.id}`,
-      txSignature: "MOCK_SIGNATURE",
-    };
+    for (const p of [15, 40, 70, 100]) {
+      await new Promise((r) => setTimeout(r, 250));
+      onProgress?.(p);
+    }
+    return { provider: "iqlabs", pointer: `iq:mock:${site.id}`, txSignature: "MOCK_SIGNATURE" };
   }
 
-  throw new Error(
-    "IQLabs SDK not wired yet. Set NEXT_PUBLIC_IQ_MOCK=1 to demo the flow, " +
-      "or implement publishToIQLabs() in lib/iqlabs.ts.",
+  if (!wallet.publicKey || !wallet.signTransaction || !wallet.signAllTransactions) {
+    throw new Error("Connect a wallet that supports transaction signing.");
+  }
+  const signer = {
+    publicKey: wallet.publicKey,
+    signTransaction: wallet.signTransaction,
+    signAllTransactions: wallet.signAllTransactions,
+  };
+  const ctx = { connection, signer };
+
+  // 1) index.html — the self-contained site. ~90% of the byte budget.
+  const html = await exportSiteHtml(site);
+  const indexSig = await codeIn(
+    ctx,
+    toBase64(new TextEncoder().encode(html)),
+    "index.html",
+    0,
+    "text/html",
+    (p) => onProgress?.(Math.round(p * 0.9)),
   );
+
+  // 2) manifest — tiny; its signature becomes the site's permanent pointer.
+  const manifest = JSON.stringify({
+    index: { path: "index.html" },
+    paths: { "index.html": { id: indexSig } },
+  });
+  const manifestSig = await codeIn(
+    ctx,
+    toBase64(new TextEncoder().encode(manifest)),
+    "manifest.json",
+    0,
+    "application/json",
+  );
+  onProgress?.(100);
+
+  return { provider: "iqlabs", pointer: manifestSig, txSignature: manifestSig };
+}
+
+/** Binary-safe base64 without relying on the Node Buffer global. */
+function toBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
 }

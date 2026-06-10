@@ -45,7 +45,7 @@ export function DomainStep({
     const name = newName.trim().replace(/\.sol$/i, "");
     if (!name) return;
     if (!MOCK) {
-      setError("Domain registration isn't wired to the live SNS SDK yet.");
+      setError("In-app registration isn't enabled yet — register at sns.id, then come back and your domain will appear in the list above.");
       return;
     }
     const fqdn = `${name}.sol`;

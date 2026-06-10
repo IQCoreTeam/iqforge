@@ -42,9 +42,7 @@ export default function TemplateGalleryPage() {
           Pick a starting point
         </h1>
         <p className="mt-3 max-w-xl text-muted-foreground">
-          Beautiful, pre-built templates you can make yours in minutes. Customize text,
-          images, and colors — then publish permanently onchain.{" "}
-          <span className="font-mono text-primary">{readyCount} live</span>, more shipping weekly.
+          Beautiful, pre-built templates you can make yours in minutes. Customize text, images, and colors — then publish permanently onchain. All {readyCount} live.
         </p>
       </header>
 

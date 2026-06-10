@@ -1,7 +1,7 @@
 // components/publish/publish-step.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { publishSite } from "@/lib/publish";
 import { estimatePayloadBytes, isMockPointer } from "@/lib/iqlabs";
@@ -27,13 +27,28 @@ export function PublishStep({
   const [phase, setPhase] = useState<Phase>("ready");
   const [message, setMessage] = useState("");
   const [pointer, setPointer] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [bytes, setBytes] = useState<number | null>(null);
+
+  useEffect(() => {
+    estimatePayloadBytes(site).then(setBytes).catch(() => setBytes(null));
+  }, [site]);
 
   const run = async () => {
     setPhase("publishing");
+    setProgress(0);
     setMessage("Writing your site onchain…");
     try {
-      const result = await publishSite({ site, wallet, connection, domain });
-      if (domain) setMessage(`Pointing ${domain} at your site…`);
+      const result = await publishSite({
+        site,
+        wallet,
+        connection,
+        domain,
+        onProgress: (p) => {
+          setProgress(p);
+          if (p >= 90 && domain) setMessage(`Pointing ${domain} at your site…`);
+        },
+      });
       setPointer(result.storage.pointer);
       setPhase("done");
       onPublished(result.storage.pointer, result.domainTx);
@@ -58,17 +73,27 @@ export function PublishStep({
         <Row label="Title" value={site.title} />
         <Row label="Domain" value={domain ?? "— (none yet)"} />
         <Row label="Storage" value="IQLabs (onchain, permanent)" />
-        <Row label="Onchain size" value={formatBytes(estimatePayloadBytes(site))} />
+        <Row label="Onchain size" value={bytes === null ? "…" : formatBytes(bytes)} />
       </div>
 
       {phase === "publishing" && (
-        <p className="mt-6 animate-pulse font-mono text-sm text-primary">{message}</p>
+        <div className="mt-6">
+          <div className="h-2 overflow-hidden rounded-full bg-secondary">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="mt-3 animate-pulse font-mono text-sm text-primary">
+            {message} {progress > 0 && `${progress}%`}
+          </p>
+        </div>
       )}
 
       {phase === "done" && (
         <div className="mt-6 rounded-xl border border-primary/40 bg-primary/10 p-5">
           <p className="font-display text-lg font-bold text-primary">Published ✓</p>
-          <p className="mt-1 break-all font-mono text-xs text-muted-foreground">path: {pointer}</p>
+          <p className="mt-1 break-all font-mono text-xs text-muted-foreground">manifest: {pointer}</p>
           {domain && (
             <p className="mt-2 text-sm">
               Live at <span className="font-mono text-primary">{domain}</span>

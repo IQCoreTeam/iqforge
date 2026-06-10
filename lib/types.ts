@@ -128,3 +128,17 @@ export interface TemplateRenderProps {
   /** True when rendered inside the live-preview pane (disables real links). */
   preview?: boolean;
 }
+
+// --- wallet -----------------------------------------------------------------
+import type { PublicKey, Transaction, VersionedTransaction, Connection } from "@solana/web3.js";
+
+/**
+ * The slice of @solana/wallet-adapter-react's useWallet() that publishing
+ * needs. Matches the IQLabs SDK's WalletSigner plus sendTransaction for SNS.
+ */
+export interface PublishWallet {
+  publicKey: PublicKey | null;
+  signTransaction?: <T extends Transaction | VersionedTransaction>(tx: T) => Promise<T>;
+  signAllTransactions?: <T extends Transaction | VersionedTransaction>(txs: T[]) => Promise<T[]>;
+  sendTransaction: (tx: Transaction, connection: Connection) => Promise<string>;
+}
