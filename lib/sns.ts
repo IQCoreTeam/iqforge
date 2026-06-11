@@ -1,18 +1,23 @@
 // lib/sns.ts
 //
-// SNS = Solana Name Service (Bonfida). The owned-domain lookup below uses the
-// real `@bonfida/spl-name-service` API. Registration and writing the content
-// record are sketched with TODOs — confirm against the current SDK version
-// before shipping, the registration flow in particular changes between versions.
+// SNS (Solana Name Service / Bonfida) integration.
 //
-//   npm i @bonfida/spl-name-service @solana/web3.js
+// VERIFIED against the gateway's own resolver (iq-gateway/src/chain/solana/sns.ts):
+// it reads the domain's V2 `Url` (then `TXT`) record and accepts either a bare
+// manifest tx signature or any URL containing /site/{sig}. We write the BARE
+// SIGNATURE — gateway-agnostic, so the site isn't tied to any one gateway host.
 
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import {
+  Record,
   getAllDomains,
+  getRecordV2,
   reverseLookup,
   resolve,
+  createRecordV2Instruction,
+  updateRecordV2Instruction,
 } from "@bonfida/spl-name-service";
+import type { PublishWallet } from "./types";
 
 export interface OwnedDomain {
   /** Bare name, e.g. "alice" (without ".sol"). */
@@ -23,13 +28,15 @@ export interface OwnedDomain {
   address: string;
 }
 
+const bare = (domain: string) => domain.replace(/\.sol$/i, "");
+
 /** List every .sol domain owned by a wallet. */
 export async function getOwnedDomains(
   connection: Connection,
   owner: PublicKey,
 ): Promise<OwnedDomain[]> {
   const keys = await getAllDomains(connection, owner);
-  const names = await Promise.all(
+  return Promise.all(
     keys.map(async (key) => {
       try {
         const name = await reverseLookup(connection, key);
@@ -39,7 +46,6 @@ export async function getOwnedDomains(
       }
     }),
   );
-  return names;
 }
 
 /** Resolve a domain to the wallet that currently controls it. */
@@ -48,7 +54,7 @@ export async function resolveOwner(
   domain: string,
 ): Promise<string | null> {
   try {
-    const owner = await resolve(connection, domain.replace(/\.sol$/i, ""));
+    const owner = await resolve(connection, bare(domain));
     return owner.toBase58();
   } catch {
     return null;
@@ -56,38 +62,51 @@ export async function resolveOwner(
 }
 
 /**
- * Point a domain at a published site.
- * CONFIRMED MODEL (from iq-gateway): the .sol domain carries ONE URL record;
- * the gateway resolves domains to on-chain IQ manifests at request time. So
- * this writes a URL record containing the manifest pointer (or the gateway
- * /site/{manifestSig} URL — confirm exact record value with the IQ team).
+ * Point a .sol domain at a published site: writes the manifest signature into
+ * the domain's V2 Url record (creating or updating as needed). After this,
+ * any IQ gateway resolves the domain straight to the on-chain site.
+ * Returns the tx signature.
  */
 export async function attachContentRecord(
   connection: Connection,
   domain: string,
-  pointer: string,
-  wallet: unknown,
+  manifestSig: string,
+  wallet: PublishWallet,
 ): Promise<string> {
-  // TODO(sns): use the Records v2 API to write a custom/URL record holding the
-  // IQLabs pointer, then send+sign with the wallet. Pseudocode:
-  //
-  //   const ix = await createRecordV2Instruction(...);
-  //   const tx = new Transaction().add(ix);
-  //   return await wallet.sendTransaction(tx, connection);
+  if (!wallet.publicKey) throw new Error("Connect a wallet first.");
+  const name = bare(domain);
+  const owner = wallet.publicKey;
 
-  void connection; void domain; void pointer; void wallet;
-  throw new Error("attachContentRecord not implemented — see lib/sns.ts TODO.");
+  let exists = false;
+  try {
+    const existing = await getRecordV2(connection, name, Record.Url);
+    exists = !!existing?.retrievedRecord;
+  } catch {
+    exists = false; // no record yet
+  }
+
+  const ix = exists
+    ? updateRecordV2Instruction(name, Record.Url, manifestSig, owner, owner)
+    : createRecordV2Instruction(name, Record.Url, manifestSig, owner, owner);
+
+  const tx = new Transaction().add(ix);
+  tx.feePayer = owner;
+  tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+  const sig = await wallet.sendTransaction(tx, connection);
+  await connection.confirmTransaction(sig, "confirmed");
+  return sig;
 }
 
-/** Kick off registration for a brand-new domain (no domains yet path). */
-export async function registerDomain(
-  connection: Connection,
-  name: string,
-  buyer: PublicKey,
-  wallet: unknown,
-): Promise<string> {
-  // TODO(sns): registration requires a registrar instruction + payment in SOL/USDC.
-  // Confirm the current `registerDomainNameV2` signature before wiring.
-  void connection; void name; void buyer; void wallet;
-  throw new Error("registerDomain not implemented — see lib/sns.ts TODO.");
+/**
+ * Register a brand-new .sol domain.
+ * Bonfida's registerDomainNameV2 exists, but requires a payment token account
+ * (USDC/SOL ATA) and price handling — deliberately NOT wired yet to avoid
+ * shipping an untested payment flow. Users can register at sns.id and the
+ * domain appears here automatically.
+ */
+export async function registerDomain(): Promise<never> {
+  throw new Error(
+    "In-app registration isn't enabled yet — register at sns.id, then refresh this page and your domain will appear.",
+  );
 }

@@ -1,15 +1,14 @@
 // lib/publish.ts
 //
 // One function coordinates the two subsystems so the UI never has to:
-//   1. write the site onchain via IQLabs  (lib/iqlabs.ts)
+//   1. write the site on-chain via IQLabs  (lib/iqlabs.ts)
 //   2. point the .sol domain at it via SNS (lib/sns.ts)
-// Mock mode (NEXT_PUBLIC_IQ_MOCK=1) lets the whole flow complete without the
-// real SDKs so the experience is demoable today.
+// Demo mode (NEXT_PUBLIC_IQ_MOCK=1) completes the flow without transactions.
 
 import type { Connection } from "@solana/web3.js";
 import { publishToIQLabs } from "./iqlabs";
 import { attachContentRecord } from "./sns";
-import type { Site, StorageRef } from "./types";
+import type { PublishWallet, Site, StorageRef } from "./types";
 
 const MOCK = process.env.NEXT_PUBLIC_IQ_MOCK === "1";
 
@@ -21,12 +20,13 @@ export interface PublishResult {
 
 export async function publishSite(args: {
   site: Site;
-  wallet: unknown;
+  wallet: PublishWallet;
   connection: Connection;
-  /** e.g. "alice.sol". Omit to publish onchain without attaching a domain yet. */
+  /** e.g. "alice.sol". Omit to publish without attaching a domain yet. */
   domain?: string;
+  onProgress?: (percent: number) => void;
 }): Promise<PublishResult> {
-  const storage = await publishToIQLabs({ site: args.site, wallet: args.wallet });
+  const storage = await publishToIQLabs(args);
 
   let domainTx: string | undefined;
   if (args.domain) {

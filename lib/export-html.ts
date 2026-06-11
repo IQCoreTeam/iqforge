@@ -1,26 +1,25 @@
 // lib/export-html.ts
 //
-// Renders a Site to a single self-contained index.html. Two purposes:
-//   1. "Download my site" — users get a real artifact they own, today.
-//   2. This is the input format of the REAL publish pipeline: the gateway
-//      serves static files under an on-chain manifest, so the eventual
-//      publishToIQLabs() will feed exactly this output to the SDK.
+// Renders a Site to a single SELF-CONTAINED index.html — the canonical publish
+// format. The compiled template stylesheet (lib/template-css.ts) is embedded,
+// so the page has zero runtime dependencies: it renders correctly forever,
+// from any gateway, with no CDN. Web fonts are progressive enhancement only —
+// if the font hosts ever vanish, system fallbacks keep the page intact.
 //
-// Interim tradeoff (flagged for the owner): templates style themselves with
-// Tailwind utility classes, so the export loads Tailwind from a CDN. That
-// works everywhere but is an external dependency — not yet "eternal". The
-// permanent fix is inlining compiled CSS at export time.
+// This output is exactly what publishToIQLabs() writes on-chain under a
+// manifest, and what "Download HTML backup" hands the user.
 
 import { createElement } from "react";
 import { TEMPLATE_COMPONENTS } from "@/components/templates";
+import { TEMPLATE_CSS } from "./template-css";
 import type { Site } from "./types";
 
 export async function exportSiteHtml(site: Site): Promise<string> {
   const Component = TEMPLATE_COMPONENTS[site.templateId];
   if (!Component) throw new Error(`No renderer for template "${site.templateId}"`);
 
-  // Dynamic import: react-dom/server can't be imported at module top level in
-  // Next.js client bundles, but works fine when loaded on demand.
+  // Dynamic import: react-dom/server can't sit at module top level in Next.js
+  // client bundles, but loads fine on demand.
   const { renderToStaticMarkup } = await import("react-dom/server");
   const body = renderToStaticMarkup(
     createElement(Component, { content: site.content, theme: site.theme, preview: false }),
@@ -32,15 +31,10 @@ export async function exportSiteHtml(site: Site): Promise<string> {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(site.title)}</title>
+<style>${TEMPLATE_CSS}</style>
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&display=swap" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Geist:wght@300;400;500;600&display=swap" />
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  html, body { margin: 0; min-height: 100%; background: ${site.theme.background}; }
-  body { font-family: "Geist", system-ui, sans-serif; }
-  .font-display { font-family: "Clash Display", sans-serif; }
-  .font-mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
-</style>
+<style>html, body { min-height: 100%; background: ${site.theme.background}; }</style>
 </head>
 <body>
 ${body}

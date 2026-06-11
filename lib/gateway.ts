@@ -29,3 +29,18 @@ export async function gatewayHealth(): Promise<unknown> {
   if (!res.ok) throw new Error(`Gateway health check failed (${res.status})`);
   return res.json();
 }
+
+/** Raw data payload of a codeIn tx via the gateway's /data route (used by the
+ *  profile system to resolve txId-stored JSON). Soft-misses return null. */
+export async function fetchTxData(txId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${GATEWAY}/data/${txId}`);
+    if (!res.ok) return null;
+    const env = (await res.json()) as { data?: string | null };
+    const data = env?.data;
+    if (!data || data.startsWith("[unable")) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}

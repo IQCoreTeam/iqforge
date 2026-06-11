@@ -3,7 +3,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { TEMPLATE_METAS } from "@/lib/templates";
+import { TEMPLATE_DEFINITIONS, TEMPLATE_METAS } from "@/lib/templates";
+import { TEMPLATE_COMPONENTS } from "@/components/templates";
 import {
   CATEGORY_LABELS,
   type TemplateCategory,
@@ -42,9 +43,7 @@ export default function TemplateGalleryPage() {
           Pick a starting point
         </h1>
         <p className="mt-3 max-w-xl text-muted-foreground">
-          Beautiful, pre-built templates you can make yours in minutes. Customize text,
-          images, and colors — then publish permanently onchain.{" "}
-          <span className="font-mono text-primary">{readyCount} live</span>, more shipping weekly.
+          Beautiful, pre-built templates you can make yours in minutes. Customize text, images, and colors — then publish permanently onchain. All {readyCount} live.
         </p>
       </header>
 
@@ -84,17 +83,11 @@ function TemplateCard({ template }: { template: TemplateMeta }) {
         ready ? "border-border hover:border-primary/60 hover:glow" : "border-border/60 opacity-70"
       }`}
     >
-      {/* thumbnail */}
+      {/* thumbnail: the real template, rendered live, scaled + soft blur */}
       <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(circle at 30% 20%, ${template.accentColor}26, transparent 55%)`,
-          }}
-        />
-        <div className="absolute inset-0 flex items-center justify-center font-display text-5xl font-bold text-foreground/10">
-          {template.name.charAt(0)}
-        </div>
+        <LiveThumb id={template.id} />
+        {/* legibility scrim + hover lift */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10 transition-opacity group-hover:opacity-60" />
         {ready ? (
           <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
             Live
@@ -134,4 +127,30 @@ function TemplateCard({ template }: { template: TemplateMeta }) {
   );
 
   return ready ? <Link href={`/build/${template.id}`}>{card}</Link> : <div>{card}</div>;
+}
+
+/**
+ * Live thumbnail: renders the template's actual component (default content +
+ * theme) at 3x card size, scaled to 1/3 with a soft blur. Never goes stale —
+ * the gallery always shows exactly what the editor opens.
+ */
+function LiveThumb({ id }: { id: string }) {
+  const def = TEMPLATE_DEFINITIONS[id];
+  const Render = TEMPLATE_COMPONENTS[id];
+  if (!def || !Render) {
+    return (
+      <div className="flex h-full w-full items-center justify-center font-display text-5xl font-bold text-foreground/10">
+        {id.charAt(0).toUpperCase()}
+      </div>
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute left-0 top-0 origin-top-left select-none"
+      style={{ width: "300%", height: "300%", transform: "scale(0.3334)", filter: "blur(1.5px)" }}
+    >
+      <Render content={def.defaultContent} theme={def.defaultTheme} preview />
+    </div>
+  );
 }

@@ -102,8 +102,10 @@ export interface StorageRef {
   provider: "iqlabs" | "ipfs" | "arweave";
   /** IQLabs onchain account/content pointer (or CID for fallbacks). */
   pointer: string;
-  /** Tx that wrote it (for IQLabs / Arweave). */
+  /** Tx that wrote it (commit id for git-sdk publishes). */
   txSignature?: string;
+  /** On-chain git repo name (git-sdk publishes; re-publish commits here). */
+  repo?: string;
 }
 
 export interface Site {
@@ -127,4 +129,18 @@ export interface TemplateRenderProps {
   theme: ThemeTokens;
   /** True when rendered inside the live-preview pane (disables real links). */
   preview?: boolean;
+}
+
+// --- wallet -----------------------------------------------------------------
+import type { PublicKey, Transaction, VersionedTransaction, Connection } from "@solana/web3.js";
+
+/**
+ * The slice of @solana/wallet-adapter-react's useWallet() that publishing
+ * needs. Matches the IQLabs SDK's WalletSigner plus sendTransaction for SNS.
+ */
+export interface PublishWallet {
+  publicKey: PublicKey | null;
+  signTransaction?: <T extends Transaction | VersionedTransaction>(tx: T) => Promise<T>;
+  signAllTransactions?: <T extends Transaction | VersionedTransaction>(txs: T[]) => Promise<T[]>;
+  sendTransaction: (tx: Transaction, connection: Connection) => Promise<string>;
 }
