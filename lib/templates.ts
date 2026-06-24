@@ -283,11 +283,10 @@ export const nftCollectionHub: TemplateDefinition = {
 // =============================================================================
 export const TEMPLATE_METAS: TemplateMeta[] = [
   // Tier 1 — built
-  creatorProfile,
   memeCoinLauncher,
   nftCollectionHub,
   tokenDashboard,
-  // Personal / Creator (2 more)
+  // Personal / Creator — personal profiles live in the /profile flow, not here
   meta("digital-nomad", "Digital Nomad", "creator", "Modern personal brand site with bio, links, and gallery.", ["brand", "creator"]),
   meta("solana-maximalist", "Solana Maximalist", "creator", "Bold personal page for heavy Solana ecosystem participants.", ["solana", "creator"]),
   // Team / Company (2)
@@ -313,7 +312,6 @@ export const TEMPLATE_METAS: TemplateMeta[] = [
 
 /** Fully-built template definitions, keyed by id. */
 export const TEMPLATE_DEFINITIONS: Record<string, TemplateDefinition> = {
-  [creatorProfile.id]: creatorProfile,
   [memeCoinLauncher.id]: memeCoinLauncher,
   [tokenDashboard.id]: tokenDashboard,
   [nftCollectionHub.id]: nftCollectionHub,
