@@ -1,59 +1,66 @@
 // lib/iqlabs.ts
 //
 // WRITE layer for IQLabs onchain storage. (Reads live in lib/gateway.ts.)
+// Single integration point for @iqlabs-official/git-sdk/browser — nothing else
+// in the codebase imports the SDK directly.
 //
-// Confirmed model (from the deployed gateway + iq-gateway repo):
-//   • A published site is a set of files written on-chain, finalized by a
-//     MANIFEST transaction. The manifest tx signature IS the on-chain path —
-//     exactly the "tail of the linked list becomes the path" rule.
-//   • The live gateway then serves it at  {gateway}/site/{manifestSig}.
-//   • The .sol domain gets ONE URL record pointing at that manifest.
-//
-// ⚠️ The write itself is still stubbed: it requires the iqlabs-solana-sdk
-// (github.com/IQCoreTeam/iqlabs-solana-sdk). Wiring real writes is a major
-// step pending owner approval — see CHANGES.md. This file stays the single
-// integration point; nothing else touches the SDK.
+// Publish flow:
+//   exportSiteHtml() → commit(index.html + iqpages.json) → deployPages()
+//   deployPages() sig = the on-chain pointer stored in the SNS Url record.
 
+import type { Connection } from "@solana/web3.js";
+import { GitClient, deployPages, readOwnerRepos } from "@iqlabs-official/git-sdk/browser";
+import { exportSiteHtml } from "./export-html";
 import type { Site, StorageRef } from "./types";
+
+/** Wallet-adapter shape the git-sdk accepts as a SignerInput. */
+export interface PublishWallet {
+  publicKey: { toBase58(): string };
+  signTransaction: (tx: unknown) => Promise<unknown>;
+  signAllTransactions?: (txs: unknown[]) => Promise<unknown[]>;
+}
 
 export interface PublishInput {
   site: Site;
-  /** Connected wallet adapter (signs the storage txs). */
-  wallet: unknown;
+  wallet: PublishWallet;
+  connection: Connection;
+  onProgress?: (step: string, percent: number) => void;
 }
 
-/** True for placeholder pointers created in demo mode. */
+/** True for placeholder pointers created in demo / mock mode. */
 export function isMockPointer(pointer: string): boolean {
   return pointer.startsWith("iq:mock:");
 }
 
 /**
- * Serializes a site into the payload to be written on-chain.
- * NOTE: the real pipeline publishes FILES (index.html + assets) under a
- * manifest, not this JSON — pending the canonical-format decision, this JSON
- * remains the draft/publish payload and the size estimator's input.
+ * Fast sync estimate of the published HTML size for the pre-publish summary.
+ * The actual HTML is ~10× larger than the raw content JSON due to markup and
+ * embedded styles, so we use that as a rough upper bound.
  */
-export function buildSitePayload(site: Site): string {
-  return JSON.stringify({
-    v: 1,
-    templateId: site.templateId,
-    title: site.title,
-    theme: site.theme,
-    content: site.content,
-    publishedAt: Date.now(),
-  });
+export function estimatePayloadBytes(site: Site): number {
+  const contentBytes = new TextEncoder().encode(JSON.stringify(site.content)).length;
+  return contentBytes * 10;
 }
 
-/** Estimated on-chain byte size of the current site payload. */
-export function estimatePayloadBytes(site: Site): number {
-  return new TextEncoder().encode(buildSitePayload(site)).length;
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 32) || "my-site";
+}
+
+function utf8ToBase64(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
 }
 
 /**
- * Writes the site on-chain and returns the manifest pointer.
- * Real implementation (once approved): generate static files via
- * lib/export-html.ts, write them + manifest with iqlabs-solana-sdk, return the
- * manifest tx signature as `pointer`.
+ * Publishes a site on-chain via git-sdk and returns the deploy pointer.
+ * Mock mode (NEXT_PUBLIC_IQ_MOCK=1) skips all chain calls so the flow is
+ * demoable without a funded wallet.
  */
 export async function publishToIQLabs(input: PublishInput): Promise<StorageRef> {
   if (process.env.NEXT_PUBLIC_IQ_MOCK === "1") {
@@ -65,8 +72,52 @@ export async function publishToIQLabs(input: PublishInput): Promise<StorageRef> 
     };
   }
 
-  throw new Error(
-    "IQLabs SDK not wired yet. Set NEXT_PUBLIC_IQ_MOCK=1 to demo the flow, " +
-      "or implement publishToIQLabs() in lib/iqlabs.ts.",
-  );
+  const { site, wallet, connection, onProgress } = input;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const signer = wallet as any;
+
+  onProgress?.("Exporting site HTML…", 10);
+  const html = await exportSiteHtml(site);
+
+  const repoName = slugify(site.title);
+
+  const iqpagesConfig: Record<string, string> = {
+    name: site.title,
+    version: "1.0.0",
+    description: `IQForge site — template ${site.templateId}`,
+    entry: "index.html",
+  };
+
+  const client = new GitClient({ connection, signer });
+
+  onProgress?.("Checking on-chain repo…", 20);
+  const ownerRepos = await readOwnerRepos(wallet.publicKey.toBase58());
+  const repoExists = ownerRepos.some((r) => r.name === repoName);
+
+  if (!repoExists) {
+    onProgress?.("Creating on-chain repo…", 30);
+    await client.createRepo({
+      name: repoName,
+      description: `IQForge: ${site.title}`,
+      isPublic: true,
+      timestamp: Date.now(),
+    });
+  }
+
+  onProgress?.("Committing files on-chain…", 45);
+  const commit = await client.commit(repoName, "publish", {
+    "index.html": utf8ToBase64(html),
+    "iqpages.json": utf8ToBase64(JSON.stringify(iqpagesConfig, null, 2)),
+  });
+
+  onProgress?.("Deploying to IQ Pages…", 80);
+  const { sig } = await deployPages(signer, repoName);
+
+  onProgress?.("Done!", 100);
+
+  return {
+    provider: "iqlabs",
+    pointer: sig,
+    txSignature: commit.id,
+  };
 }
