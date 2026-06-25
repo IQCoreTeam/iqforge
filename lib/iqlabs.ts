@@ -38,7 +38,8 @@ export function isMockPointer(pointer: string): boolean {
  * embedded styles, so we use that as a rough upper bound.
  */
 export function estimatePayloadBytes(site: Site): number {
-  const contentBytes = new TextEncoder().encode(JSON.stringify(site.content)).length;
+  const payload = site.builder === "puck" ? site.puckData : site.content;
+  const contentBytes = new TextEncoder().encode(JSON.stringify(payload ?? {})).length;
   return contentBytes * 10;
 }
 
@@ -104,11 +105,18 @@ export async function publishToIQLabs(input: PublishInput): Promise<StorageRef> 
     });
   }
 
-  onProgress?.("Committing files on-chain…", 45);
-  const commit = await client.commit(repoName, "publish", {
+  const files: Record<string, string> = {
     "index.html": utf8ToBase64(html),
     "iqpages.json": utf8ToBase64(JSON.stringify(iqpagesConfig, null, 2)),
-  });
+  };
+  // Persist the Puck source so a published visual-builder site can be
+  // re-opened and edited later straight from chain.
+  if (site.builder === "puck" && site.puckData !== undefined) {
+    files["puck.json"] = utf8ToBase64(JSON.stringify(site.puckData));
+  }
+
+  onProgress?.("Committing files on-chain…", 45);
+  const commit = await client.commit(repoName, "publish", files);
 
   onProgress?.("Deploying to IQ Pages…", 80);
   const { sig } = await deployPages(signer, repoName);

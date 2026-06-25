@@ -32,12 +32,13 @@ export default function HomePage() {
           accent="#3DFE7E"
         />
         <PathCard
-          href="/templates"
+          href="/build/website"
           badge="Website"
           title="Build a Website"
-          description="Pick a template, make it yours, and publish a full page on-chain via IQ Pages. Attach a .sol domain and it lives forever."
-          cta="Browse templates →"
+          description="Drag-and-drop a full page in the visual builder, then publish on-chain via IQ Pages. Attach a .sol domain and it lives forever."
+          cta="Open the builder →"
           accent="#818CF8"
+          secondary={{ href: "/templates", label: "or start from a template" }}
         />
       </div>
 
@@ -58,6 +59,7 @@ function PathCard({
   description,
   cta,
   accent,
+  secondary,
 }: {
   href: string;
   badge: string;
@@ -65,23 +67,31 @@ function PathCard({
   description: string;
   cta: string;
   accent: string;
+  secondary?: { href: string; label: string };
 }) {
   return (
-    <Link
-      href={href}
-      className="group flex flex-col rounded-2xl border border-border bg-card p-7 transition-all hover:border-primary/60 hover:glow"
-    >
-      <span
-        className="mb-4 inline-block self-start rounded-full px-3 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest"
-        style={{ background: `${accent}26`, color: accent }}
-      >
-        {badge}
-      </span>
-      <h2 className="font-display text-2xl font-bold">{title}</h2>
-      <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
-      <span className="mt-6 font-medium" style={{ color: accent }}>
-        {cta}
-      </span>
-    </Link>
+    <div className="group flex flex-col rounded-2xl border border-border bg-card p-7 transition-all hover:border-primary/60 hover:glow">
+      <Link href={href} className="flex flex-1 flex-col">
+        <span
+          className="mb-4 inline-block self-start rounded-full px-3 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest"
+          style={{ background: `${accent}26`, color: accent }}
+        >
+          {badge}
+        </span>
+        <h2 className="font-display text-2xl font-bold">{title}</h2>
+        <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+        <span className="mt-6 font-medium" style={{ color: accent }}>
+          {cta}
+        </span>
+      </Link>
+      {secondary ? (
+        <Link
+          href={secondary.href}
+          className="mt-3 text-xs text-muted-foreground hover:text-primary hover:underline"
+        >
+          {secondary.label}
+        </Link>
+      ) : null}
+    </div>
   );
 }

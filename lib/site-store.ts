@@ -5,6 +5,7 @@
 // wallet via IQLabs). When the IQLabs read path is wired, `listSites` can merge
 // onchain records in here — the rest of the app won't need to change.
 
+import { IQ_THEME } from "./types";
 import type { Site, SiteContent, TemplateDefinition, ThemeTokens } from "./types";
 
 const KEY = "iqforge:sites";
@@ -52,6 +53,24 @@ export function saveSite(site: Site): Site {
 
 export function deleteSite(id: string): void {
   writeAll(readAll().filter((s) => s.id !== id));
+}
+
+/** Build a fresh draft Site from the Puck visual builder. */
+export function newPuckSite(wallet: string, title: string, puckData: unknown): Site {
+  const now = Date.now();
+  return {
+    id: crypto.randomUUID(),
+    ownerWallet: wallet,
+    builder: "puck",
+    templateId: "puck",
+    title,
+    content: {},
+    puckData,
+    theme: IQ_THEME,
+    status: "draft",
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 /** Build a fresh draft Site from a template + the customizer's output. */
