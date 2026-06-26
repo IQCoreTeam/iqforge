@@ -5,7 +5,6 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
   DEFAULT_PROFILE_DATA,
   PROFILE_THEMES,
-  SOCIAL_PLATFORMS,
   publishProfile,
   type ProfileMeta,
   type ProfileData,
@@ -13,6 +12,7 @@ import {
 } from "@/lib/profile";
 import { ThemePicker } from "@/components/profile/theme-picker";
 import { ProfileForm } from "@/components/profile/profile-form";
+import { ProfileCard } from "@/components/profile/profile-card";
 
 type Phase = "edit" | "publishing" | "done" | "error";
 
@@ -78,49 +78,9 @@ export default function ProfilePage() {
         <ThemePicker themes={PROFILE_THEMES} selected={theme} onChange={setTheme} />
       </section>
 
-      {/* Live mini-preview */}
+      {/* Live preview — rendered through our own iqui kit */}
       <section className="mt-6">
-        <div
-          className="rounded-xl p-5"
-          style={{ background: theme.canvas, border: `1px solid ${theme.borderDark}` }}
-        >
-          <div
-            className="mb-3 inline-block rounded px-3 py-1 font-mono text-xs font-bold"
-            style={{ background: theme.headerBackground, color: theme.headerText }}
-          >
-            {theme.name}
-          </div>
-          {data.profilePicture && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.profilePicture}
-              alt="avatar"
-              className="mb-3 h-14 w-14 rounded-full object-cover"
-              style={{ border: `2px solid ${theme.borderDark}` }}
-            />
-          )}
-          <p className="font-display text-xl font-bold" style={{ color: theme.canvasText }}>
-            {data.name || "Your Name"}
-          </p>
-          {data.bio && (
-            <p className="mt-2 text-sm" style={{ color: theme.canvasText }}>
-              {data.bio}
-            </p>
-          )}
-          {Object.keys(data.socials).length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {SOCIAL_PLATFORMS.filter((p) => data.socials[p.key]).map((p) => (
-                <span
-                  key={p.key}
-                  className="rounded px-2 py-0.5 font-mono text-xs"
-                  style={{ background: theme.material, color: theme.anchor }}
-                >
-                  {p.label}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+        <ProfileCard data={data} theme={theme} />
       </section>
 
       {/* Form */}
