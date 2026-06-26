@@ -1,29 +1,64 @@
 // lib/profile.ts
 //
 // Profile system — distinct from the website builder.
-// A profile is wallet-keyed identity: { data, theme } committed on-chain via
-// git-sdk to a fixed "iq-profile" repo. iq-wide-web and every IQ surface read
-// it from there — one source of truth, renders identically everywhere.
+// A profile is wallet-keyed identity. We write it exactly the way iq-wide-web
+// does: the ProfileMeta JSON (name/bio/profilePicture/socials) goes through
+// codeIn, and the resulting txId is linked onto the caller's user PDA under the
+// shared "iqprofile-root" DbRoot. iq-wide-web resolves the same wallet → this
+// metadata, so the profile renders identically everywhere — one source of truth.
 //
-// Theme format: react95's flat color-token shape. Any react95-compatible
-// renderer can apply it without knowing anything about IQForge.
+// We additionally tuck a react95 `theme` onto the JSON. iq-wide-web ignores
+// unknown keys (it applies its own global theme), so the field round-trips
+// harmlessly while any react95-aware renderer can pick it up.
 
-import type { Connection } from "@solana/web3.js";
-import { GitClient, readOwnerRepos } from "@iqlabs-official/git-sdk/browser";
+import {
+  Connection,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  type VersionedTransaction,
+} from "@solana/web3.js";
+import iqlabs from "@iqlabs-official/solana-sdk";
+
+// IQDB root that holds the user-metadata table iq-wide-web reads from, and the
+// IQLabs program id. Both copied verbatim from iq-wide-web/src/lib/constants.ts
+// so IQForge writes into the exact same profile system. Override via env if a
+// future deployment moves them.
+export const PROFILE_ROOT_ID = process.env.NEXT_PUBLIC_IQ_ROOT_ID || "iqprofile-root";
+export const IQ_PROGRAM_ID =
+  process.env.NEXT_PUBLIC_IQ_PROGRAM_ID || "9KLLchQVJpGkw4jPuUmnvqESdR7mtNCYr3qS4iQLabs";
 
 // --- Types ---
 
-export interface ProfileLink {
-  label: string;
-  url: string;
-}
+/** Social platforms iq-wide-web renders. Keys must match its SocialKey union
+ *  (iq-wide-web/src/lib/profile/socials.ts) or the values won't render there. */
+export type SocialKey =
+  | "twitter"
+  | "github"
+  | "website"
+  | "linkedin"
+  | "telegram"
+  | "discord"
+  | "email";
 
+export const SOCIAL_PLATFORMS: { key: SocialKey; label: string; placeholder: string }[] = [
+  { key: "twitter", label: "Twitter / X", placeholder: "https://x.com/you" },
+  { key: "github", label: "GitHub", placeholder: "https://github.com/you" },
+  { key: "website", label: "Website", placeholder: "https://example.com" },
+  { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/you" },
+  { key: "telegram", label: "Telegram", placeholder: "https://t.me/you" },
+  { key: "discord", label: "Discord", placeholder: "you#1234" },
+  { key: "email", label: "Email", placeholder: "you@example.com" },
+];
+
+/** Editable profile fields. Shape mirrors iq-wide-web's ProfileMeta so what we
+ *  write is exactly what every IQ surface reads — `name`, not `displayName`;
+ *  `socials` keyed by platform, not free-form links. */
 export interface ProfileData {
-  displayName: string;
-  handle: string;
+  name: string;
   bio: string;
-  avatar?: string;
-  links: ProfileLink[];
+  profilePicture?: string; // URL or on-chain txId
+  socials: Partial<Record<SocialKey, string>>;
 }
 
 /** Flat color-token object — matches react95's Theme shape exactly. */
@@ -54,12 +89,13 @@ export interface ProfileTheme {
   tooltip: string;
 }
 
-/** The full profile stored on-chain as iqprofile.json. */
-export interface IQProfile {
-  version: 1;
-  format: "react95";
-  data: ProfileData;
-  theme: ProfileTheme;
+/** What actually gets serialized to chain and linked onto the user PDA.
+ *  The base fields (name/bio/profilePicture/socials) are iq-wide-web's
+ *  ProfileMeta and render identically there. `theme` is an additive field —
+ *  iq-wide-web's JSON.parse ignores unknown keys, so it round-trips harmlessly
+ *  while any react95-aware renderer (IQForge, future IQ surfaces) can apply it. */
+export interface ProfileMeta extends ProfileData {
+  theme?: ProfileTheme;
 }
 
 // --- Built-in themes ---
@@ -198,82 +234,95 @@ export const PROFILE_THEMES: ProfileTheme[] = [
 ];
 
 export const DEFAULT_PROFILE_DATA: ProfileData = {
-  displayName: "Your Name",
-  handle: "@yourhandle",
+  name: "Your Name",
   bio: "Builder. Creator. Permanently onchain.",
-  avatar: "",
-  links: [
-    { label: "Twitter / X", url: "https://x.com/" },
-    { label: "GitHub", url: "https://github.com/" },
-  ],
+  profilePicture: "",
+  socials: {},
 };
 
 // --- Publish ---
 
 export interface ProfilePublishInput {
-  profile: IQProfile;
+  profile: ProfileMeta;
+  // Wallet-adapter's useWallet() shape — generic signers the SDK accepts directly.
   wallet: {
-    publicKey: { toBase58(): string };
-    signTransaction: (tx: unknown) => Promise<unknown>;
-    signAllTransactions?: (txs: unknown[]) => Promise<unknown[]>;
+    publicKey: PublicKey | null;
+    signTransaction?: <T extends Transaction | VersionedTransaction>(tx: T) => Promise<T>;
+    signAllTransactions?: <T extends Transaction | VersionedTransaction>(txs: T[]) => Promise<T[]>;
   };
   connection: Connection;
   onProgress?: (step: string, percent: number) => void;
 }
 
 export interface ProfilePublishResult {
-  commitId: string;
+  /** The codeIn txId now linked on the user PDA. */
+  txId: string;
   pointer: string;
 }
 
-const PROFILE_REPO_NAME = "iq-profile";
-
-function utf8ToBase64(str: string): string {
-  const bytes = new TextEncoder().encode(str);
-  let binary = "";
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary);
-}
-
 /**
- * Writes the profile on-chain via git-sdk.
- * Commits iqprofile.json to the wallet owner's "iq-profile" repo.
- * iq-wide-web reads it from there via readPagesProfile().
+ * Writes the profile to chain exactly the way iq-wide-web does
+ * (src/lib/profile/use-profile-editor.ts):
+ *   1. ensure the iqprofile-root DbRoot exists,
+ *   2. codeIn(JSON) → txId holding the profile JSON,
+ *   3. updateUserMetadata(txId) → link it onto the caller's user PDA.
+ * iq-wide-web's useProfile then resolves the same wallet → this metadata, so the
+ * profile renders identically on every IQ surface. One source of truth.
  */
 export async function publishProfile(input: ProfilePublishInput): Promise<ProfilePublishResult> {
   if (process.env.NEXT_PUBLIC_IQ_MOCK === "1") {
     await new Promise((r) => setTimeout(r, 600));
-    return {
-      commitId: "MOCK_COMMIT",
-      pointer: `iq:mock:profile:${input.profile.data.handle}`,
-    };
+    return { txId: "MOCK_TXID", pointer: `iq:mock:profile:${input.profile.name}` };
   }
 
   const { profile, wallet, connection, onProgress } = input;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const signer = wallet as any;
-  const client = new GitClient({ connection, signer });
+  if (!wallet.publicKey || !wallet.signTransaction || !wallet.signAllTransactions) {
+    throw new Error("Wallet not connected");
+  }
+  const signer = {
+    publicKey: wallet.publicKey,
+    signTransaction: wallet.signTransaction,
+    signAllTransactions: wallet.signAllTransactions,
+  };
 
-  onProgress?.("Checking profile repo…", 20);
-  const ownerRepos = await readOwnerRepos(wallet.publicKey.toBase58());
-  const repoExists = ownerRepos.some((r) => r.name === PROFILE_REPO_NAME);
+  const programId = new PublicKey(IQ_PROGRAM_ID);
+  const dbRootSeed = iqlabs.utils.toSeedBytes(PROFILE_ROOT_ID);
+  const dbRoot = iqlabs.contract.getDbRootPda(dbRootSeed, programId);
 
-  if (!repoExists) {
-    onProgress?.("Creating profile repo…", 35);
-    await client.createRepo({
-      name: PROFILE_REPO_NAME,
-      description: "IQ on-chain profile",
-      isPublic: true,
-      timestamp: Date.now(),
-    });
+  // Lazily initialize the profile DbRoot on first-ever write. The "already in
+  // use" race (another client created it concurrently) is treated as success.
+  onProgress?.("Preparing profile root…", 20);
+  if (!(await connection.getAccountInfo(dbRoot))) {
+    try {
+      const builder = iqlabs.contract.createInstructionBuilder();
+      const ix = iqlabs.contract.initializeDbRootInstruction(
+        builder,
+        { db_root: dbRoot, signer: wallet.publicKey, system_program: SystemProgram.programId },
+        { db_root_id: dbRootSeed },
+      );
+      const tx = new Transaction().add(ix);
+      tx.feePayer = wallet.publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+      const signed = await signer.signTransaction(tx);
+      await connection.sendRawTransaction(signed.serialize());
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/already in use|AlreadyInUse/i.test(msg)) throw e;
+    }
   }
 
-  onProgress?.("Writing profile on-chain…", 60);
-  const commit = await client.commit(PROFILE_REPO_NAME, "update profile", {
-    "iqprofile.json": utf8ToBase64(JSON.stringify(profile, null, 2)),
-  });
+  onProgress?.("Writing profile on-chain…", 55);
+  const txId = await iqlabs.writer.codeIn(
+    { connection, signer },
+    [JSON.stringify(profile)],
+    "profile-metadata",
+    0,
+  );
+  if (!txId) throw new Error("codeIn returned no txId");
+
+  onProgress?.("Linking to your wallet…", 85);
+  await iqlabs.writer.updateUserMetadata(connection, signer, dbRootSeed, txId);
 
   onProgress?.("Done!", 100);
-
-  return { commitId: commit.id, pointer: commit.id };
+  return { txId, pointer: txId };
 }

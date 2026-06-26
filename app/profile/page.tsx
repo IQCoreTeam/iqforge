@@ -5,8 +5,9 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
   DEFAULT_PROFILE_DATA,
   PROFILE_THEMES,
+  SOCIAL_PLATFORMS,
   publishProfile,
-  type IQProfile,
+  type ProfileMeta,
   type ProfileData,
   type ProfileTheme,
 } from "@/lib/profile";
@@ -34,7 +35,7 @@ export default function ProfilePage() {
 
     setPhase("publishing");
 
-    const profile: IQProfile = { version: 1, format: "react95", data, theme };
+    const profile: ProfileMeta = { ...data, theme };
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,35 +90,32 @@ export default function ProfilePage() {
           >
             {theme.name}
           </div>
-          {data.avatar && (
+          {data.profilePicture && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={data.avatar}
+              src={data.profilePicture}
               alt="avatar"
               className="mb-3 h-14 w-14 rounded-full object-cover"
               style={{ border: `2px solid ${theme.borderDark}` }}
             />
           )}
           <p className="font-display text-xl font-bold" style={{ color: theme.canvasText }}>
-            {data.displayName || "Display Name"}
-          </p>
-          <p className="font-mono text-sm" style={{ color: theme.canvasTextDisabled }}>
-            {data.handle || "@handle"}
+            {data.name || "Your Name"}
           </p>
           {data.bio && (
             <p className="mt-2 text-sm" style={{ color: theme.canvasText }}>
               {data.bio}
             </p>
           )}
-          {data.links.length > 0 && (
+          {Object.keys(data.socials).length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
-              {data.links.map((l, i) => (
+              {SOCIAL_PLATFORMS.filter((p) => data.socials[p.key]).map((p) => (
                 <span
-                  key={i}
+                  key={p.key}
                   className="rounded px-2 py-0.5 font-mono text-xs"
                   style={{ background: theme.material, color: theme.anchor }}
                 >
-                  {l.label || l.url}
+                  {p.label}
                 </span>
               ))}
             </div>
@@ -140,7 +138,7 @@ export default function ProfilePage() {
           <div className="mb-4 rounded-xl border border-primary/40 bg-primary/10 p-4">
             <p className="font-display font-bold text-primary">Profile published ✓</p>
             <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-              commit: {pointer}
+              txId: {pointer}
             </p>
           </div>
         )}

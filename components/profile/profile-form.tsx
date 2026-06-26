@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProfileData, ProfileLink } from "@/lib/profile";
+import { SOCIAL_PLATFORMS, type ProfileData } from "@/lib/profile";
 
 export function ProfileForm({
   data,
@@ -12,35 +12,21 @@ export function ProfileForm({
   const set = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) =>
     onChange({ ...data, [key]: value });
 
-  const setLink = (index: number, link: ProfileLink) => {
-    const next = [...data.links];
-    next[index] = link;
-    set("links", next);
+  const setSocial = (key: string, value: string) => {
+    const next = { ...data.socials };
+    if (value.trim()) next[key as keyof typeof next] = value;
+    else delete next[key as keyof typeof next];
+    set("socials", next);
   };
-
-  const addLink = () => set("links", [...data.links, { label: "", url: "https://" }]);
-
-  const removeLink = (index: number) =>
-    set("links", data.links.filter((_, i) => i !== index));
 
   return (
     <div className="space-y-5">
-      <Field label="Display name">
+      <Field label="Name">
         <input
-          value={data.displayName}
-          onChange={(e) => set("displayName", e.target.value)}
+          value={data.name}
+          onChange={(e) => set("name", e.target.value)}
           maxLength={40}
           placeholder="Satoshi"
-          className={INPUT_CLS}
-        />
-      </Field>
-
-      <Field label="Handle">
-        <input
-          value={data.handle}
-          onChange={(e) => set("handle", e.target.value)}
-          maxLength={30}
-          placeholder="@satoshi"
           className={INPUT_CLS}
         />
       </Field>
@@ -56,47 +42,27 @@ export function ProfileForm({
         />
       </Field>
 
-      <Field label="Avatar URL" hint="Paste a URL or leave blank">
+      <Field label="Profile picture" hint="Paste a URL or leave blank">
         <input
-          value={data.avatar ?? ""}
-          onChange={(e) => set("avatar", e.target.value)}
+          value={data.profilePicture ?? ""}
+          onChange={(e) => set("profilePicture", e.target.value)}
           placeholder="https://..."
           className={INPUT_CLS}
         />
       </Field>
 
       <div>
-        <div className="mb-2 flex items-center justify-between">
-          <label className="text-sm font-medium">Links</label>
-          <button
-            onClick={addLink}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            + Add link
-          </button>
-        </div>
+        <label className="mb-2 block text-sm font-medium">Socials</label>
         <div className="space-y-2">
-          {data.links.map((link, i) => (
-            <div key={i} className="flex gap-2">
+          {SOCIAL_PLATFORMS.map(({ key, label, placeholder }) => (
+            <div key={key} className="flex items-center gap-2">
+              <span className="w-24 shrink-0 text-xs text-muted-foreground">{label}</span>
               <input
-                value={link.label}
-                onChange={(e) => setLink(i, { ...link, label: e.target.value })}
-                placeholder="Label"
-                className={INPUT_CLS + " w-1/3"}
-              />
-              <input
-                value={link.url}
-                onChange={(e) => setLink(i, { ...link, url: e.target.value })}
-                placeholder="https://"
+                value={data.socials[key] ?? ""}
+                onChange={(e) => setSocial(key, e.target.value)}
+                placeholder={placeholder}
                 className={INPUT_CLS + " flex-1"}
               />
-              <button
-                onClick={() => removeLink(i)}
-                className="text-muted-foreground hover:text-destructive"
-                aria-label="Remove link"
-              >
-                ×
-              </button>
             </div>
           ))}
         </div>
