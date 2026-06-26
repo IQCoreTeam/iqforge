@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GrapesJS – IQForge Study</title>
+  <link rel="stylesheet" href="https://unpkg.com/grapesjs@0.21.13/dist/css/grapes.min.css" />
+  <script src="https://unpkg.com/grapesjs@0.21.13/dist/grapes.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; }
+    #toolbar {
+      display: flex; gap: 8px; padding: 8px 12px; background: #1a1a2e;
+      align-items: center; flex-shrink: 0;
+    }
+    #toolbar h1 { color: #e2e8f0; font-size: 14px; font-weight: 600; flex: 1; }
+    button {
+      padding: 6px 14px; border: none; border-radius: 4px; cursor: pointer;
+      font-size: 12px; font-weight: 600;
+    }
+    #btn-save   { background: #3b82f6; color: #fff; }
+    #btn-load   { background: #6366f1; color: #fff; }
+    #btn-export { background: #10b981; color: #fff; }
+    #btn-clear  { background: #ef4444; color: #fff; }
+    #gjs { flex: 1; overflow: hidden; }
+    #json-panel {
+      position: fixed; bottom: 0; left: 0; right: 0; max-height: 280px;
+      background: #0f172a; color: #94a3b8; font-family: monospace; font-size: 12px;
+      padding: 12px; overflow: auto; display: none; z-index: 9999;
+      border-top: 2px solid #3b82f6;
+    }
+    #json-panel.open { display: block; }
+    #json-close {
+      position: sticky; top: 0; float: right; background: #ef4444;
+      color: #fff; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div id="toolbar">
+  <h1>GrapesJS – Block / JSON / Export Study</h1>
+  <button id="btn-save">Save JSON</button>
+  <button id="btn-load">Load JSON</button>
+  <button id="btn-export">Export HTML</button>
+  <button id="btn-clear">Clear</button>
+</div>
+
+<div id="gjs"></div>
+<div id="json-panel">
+  <button id="json-close">✕ close</button>
+  <pre id="json-content"></pre>
+</div>
+
+<script src="src/main.js"></script>
+</body>
+</html>

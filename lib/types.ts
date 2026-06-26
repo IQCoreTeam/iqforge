@@ -106,12 +106,20 @@ export interface StorageRef {
   txSignature?: string;
 }
 
+/** Which editor produced this site. */
+export type SiteBuilder = "template" | "puck";
+
 export interface Site {
   id: string;
   ownerWallet: string;
+  /** "template" (schema-driven, default) or "puck" (visual drag-and-drop). */
+  builder?: SiteBuilder;
+  /** Template id for builder === "template"; "puck" for visual-builder sites. */
   templateId: string;
   title: string;
   content: SiteContent;
+  /** Puck editor `Data` (serializable JSON) — present when builder === "puck". */
+  puckData?: unknown;
   theme: ThemeTokens;
   /** Attached SNS domain, e.g. "alice.sol". */
   domain?: string;

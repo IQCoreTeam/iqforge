@@ -9,28 +9,32 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "^15.1.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@solana/web3.js": "^1.95.3",
+    "@bonfida/spl-name-service": "^3.0.9",
+    "@iqlabs-official/ethereum-sdk": "^0.2.2",
+    "@iqlabs-official/git-sdk": "^0.1.18",
+    "@iqlabs-official/solana-sdk": "^0.1.27",
+    "@measured/puck": "^0.20.2",
     "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/wallet-adapter-react": "^0.15.35",
     "@solana/wallet-adapter-react-ui": "^0.9.35",
     "@solana/wallet-adapter-wallets": "^0.19.32",
-    "@bonfida/spl-name-service": "^3.0.9",
-    "tailwindcss-animate": "^1.0.7",
-    "@iqlabs-official/solana-sdk": "^0.1.27",
-    "buffer": "^6.0.3"
+    "@solana/web3.js": "^1.95.3",
+    "buffer": "^6.0.3",
+    "ethers": "^6.17.0",
+    "next": "^15.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "tailwindcss": "^3.4.13",
-    "postcss": "^8.4.47",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
-    "eslint-config-next": "^15.1.0"
+    "eslint-config-next": "^15.1.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.3"
   }
 }

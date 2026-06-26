@@ -1,37 +1,97 @@
-// app/page.tsx
 import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main className="relative mx-auto max-w-3xl px-6 py-28 text-center">
+    <main className="relative mx-auto max-w-4xl px-6 py-24">
       <div
         className="pointer-events-none absolute inset-0 -z-10 opacity-70"
         style={{ background: "radial-gradient(circle at 50% 0%, hsl(var(--iq-green) / 0.12), transparent 60%)" }}
       />
-      <p className="font-mono text-xs uppercase tracking-widest text-primary">SNS × IQLabs</p>
-      <h1 className="mt-4 font-display text-5xl font-bold leading-tight sm:text-6xl">
-        Build a website that
-        <br />
-        <span className="text-primary text-glow">lives forever</span>.
-      </h1>
-      <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground">
-        Pick a template, make it yours, attach a .sol domain, and publish permanently
-        onchain. No code, no servers, no link rot.
-      </p>
-      <div className="mt-10 flex justify-center gap-4">
-        <Link
-          href="/templates"
-          className="rounded-xl bg-primary px-7 py-3.5 font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
-        >
-          Browse templates
-        </Link>
-        <Link
-          href="/dashboard"
-          className="rounded-xl border border-border px-7 py-3.5 font-medium transition-colors hover:border-primary"
-        >
-          My Sites
-        </Link>
+
+      <div className="text-center">
+        <p className="font-mono text-xs uppercase tracking-widest text-primary">SNS × IQLabs</p>
+        <h1 className="mt-4 font-display text-5xl font-bold leading-tight sm:text-6xl">
+          Build things that
+          <br />
+          <span className="text-primary text-glow">live forever</span>.
+        </h1>
+        <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground">
+          Publish your identity and your sites permanently onchain. No code, no servers,
+          no link rot. Attach a .sol domain and you&apos;re done.
+        </p>
       </div>
+
+      {/* Two paths */}
+      <div className="mt-16 grid gap-5 sm:grid-cols-2">
+        <PathCard
+          href="/profile"
+          badge="Identity"
+          title="Build a Profile"
+          description="Your permanent on-chain identity. Pick a theme, fill in your details, and publish once — renders identically on every IQ surface."
+          cta="Create profile →"
+          accent="#3DFE7E"
+        />
+        <PathCard
+          href="/build/website"
+          badge="Website"
+          title="Build a Website"
+          description="Drag-and-drop a full page in the visual builder, then publish on-chain via IQ Pages. Attach a .sol domain and it lives forever."
+          cta="Open the builder →"
+          accent="#818CF8"
+          secondary={{ href: "/templates", label: "or start from a template" }}
+        />
+      </div>
+
+      <p className="mt-10 text-center text-sm text-muted-foreground">
+        Already published something?{" "}
+        <Link href="/dashboard" className="font-medium text-primary hover:underline">
+          View My Sites →
+        </Link>
+      </p>
     </main>
+  );
+}
+
+function PathCard({
+  href,
+  badge,
+  title,
+  description,
+  cta,
+  accent,
+  secondary,
+}: {
+  href: string;
+  badge: string;
+  title: string;
+  description: string;
+  cta: string;
+  accent: string;
+  secondary?: { href: string; label: string };
+}) {
+  return (
+    <div className="group flex flex-col rounded-2xl border border-border bg-card p-7 transition-all hover:border-primary/60 hover:glow">
+      <Link href={href} className="flex flex-1 flex-col">
+        <span
+          className="mb-4 inline-block self-start rounded-full px-3 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest"
+          style={{ background: `${accent}26`, color: accent }}
+        >
+          {badge}
+        </span>
+        <h2 className="font-display text-2xl font-bold">{title}</h2>
+        <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+        <span className="mt-6 font-medium" style={{ color: accent }}>
+          {cta}
+        </span>
+      </Link>
+      {secondary ? (
+        <Link
+          href={secondary.href}
+          className="mt-3 text-xs text-muted-foreground hover:text-primary hover:underline"
+        >
+          {secondary.label}
+        </Link>
+      ) : null}
+    </div>
   );
 }

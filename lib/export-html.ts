@@ -12,10 +12,17 @@
 // permanent fix is inlining compiled CSS at export time.
 
 import { createElement } from "react";
+import type { Data } from "@measured/puck";
 import { TEMPLATE_COMPONENTS } from "@/components/templates";
+import { exportPuckHtml } from "./puck-export";
 import type { Site } from "./types";
 
 export async function exportSiteHtml(site: Site): Promise<string> {
+  // Visual-builder sites render through Puck; the output is self-contained.
+  if (site.builder === "puck") {
+    return exportPuckHtml(site.puckData as Data, site.title);
+  }
+
   const Component = TEMPLATE_COMPONENTS[site.templateId];
   if (!Component) throw new Error(`No renderer for template "${site.templateId}"`);
 

@@ -26,7 +26,12 @@ export async function publishSite(args: {
   /** e.g. "alice.sol". Omit to publish onchain without attaching a domain yet. */
   domain?: string;
 }): Promise<PublishResult> {
-  const storage = await publishToIQLabs({ site: args.site, wallet: args.wallet });
+  const storage = await publishToIQLabs({
+    site: args.site,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    wallet: args.wallet as any,
+    connection: args.connection,
+  });
 
   let domainTx: string | undefined;
   if (args.domain) {

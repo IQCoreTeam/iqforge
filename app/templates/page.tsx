@@ -36,15 +36,21 @@ export default function TemplateGalleryPage() {
     <div className="mx-auto max-w-6xl px-6 py-16">
       <header className="mb-12">
         <p className="font-mono text-xs uppercase tracking-widest text-primary">
-          IQForge · Template Gallery
+          IQForge · Website Templates
         </p>
         <h1 className="mt-3 font-display text-4xl font-bold sm:text-5xl">
-          Pick a starting point
+          Pick a website template
         </h1>
         <p className="mt-3 max-w-xl text-muted-foreground">
-          Beautiful, pre-built templates you can make yours in minutes. Customize text,
-          images, and colors — then publish permanently onchain.{" "}
+          Pre-built templates for tokens, NFTs, DAOs, and more. Customize and publish
+          permanently onchain via IQ Pages.{" "}
           <span className="font-mono text-primary">{readyCount} live</span>, more shipping weekly.
+        </p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Looking for a personal profile?{" "}
+          <a href="/profile" className="font-medium text-primary hover:underline">
+            Build your on-chain identity →
+          </a>
         </p>
       </header>
 
